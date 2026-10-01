@@ -207,6 +207,11 @@ class Celebrate : public GameInteractionEffectBase {
     void _Apply() override;
 };
 
+class Warp : public GameInteractionEffectBase, public ParameterizedGameInteractionEffect {
+    GameInteractionEffectQueryResult CanBeApplied() override;
+    void _Apply() override;
+};
+
 class SetCollisionViewer : public RemovableGameInteractionEffect {
     GameInteractionEffectQueryResult CanBeApplied() override;
     void _Apply() override;

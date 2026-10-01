@@ -319,6 +319,12 @@ std::unique_ptr<GameInteractionEffectBase> Sail::EffectFromJson(nlohmann::json p
         return effect;
     } else if (name == "SwitchAge") {
         return std::make_unique<GameInteractionEffect::SwitchAge>();
+    } else if (name == "Warp") {
+        auto effect = std::make_unique<GameInteractionEffect::Warp>();
+        if (payload.contains("parameters")) {
+            effect->parameters[0] = payload["parameters"][0].get<int32_t>();
+        }
+        return effect;
     } else if (name == "Celebrate") {
         return std::make_unique<GameInteractionEffect::Celebrate>();
     } else if (name == "SetCollisionViewer") {

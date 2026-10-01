@@ -521,6 +521,23 @@ void Celebrate::_Apply() {
     Celebrate_Queue();
 }
 
+// MARK: - Warp
+GameInteractionEffectQueryResult Warp::CanBeApplied() {
+    if (!GameInteractor::IsSaveLoaded(true) || GameInteractor::IsGameplayPaused() ||
+        gPlayState->transitionTrigger != TRANS_TRIGGER_OFF) {
+        return GameInteractionEffectQueryResult::TemporarilyNotPossible;
+    } else {
+        return GameInteractionEffectQueryResult::Possible;
+    }
+}
+// TeleportPlayer without its Ganondorf laugh
+void Warp::_Apply() {
+    gPlayState->nextEntranceIndex = parameters[0];
+    gPlayState->transitionTrigger = TRANS_TRIGGER_START;
+    gPlayState->transitionType = TRANS_TYPE_FADE_BLACK;
+    gSaveContext.nextTransitionType = TRANS_TYPE_FADE_BLACK;
+}
+
 // MARK: - SetCollisionViewer
 GameInteractionEffectQueryResult SetCollisionViewer::CanBeApplied() {
     if (!GameInteractor::IsSaveLoaded(true) || GameInteractor::IsGameplayPaused()) {
