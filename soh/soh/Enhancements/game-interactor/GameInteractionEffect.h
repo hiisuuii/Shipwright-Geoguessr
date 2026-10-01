@@ -202,6 +202,11 @@ class SwitchAge : public GameInteractionEffectBase {
     void _Apply() override;
 };
 
+class Celebrate : public GameInteractionEffectBase {
+    GameInteractionEffectQueryResult CanBeApplied() override;
+    void _Apply() override;
+};
+
 class SetCollisionViewer : public RemovableGameInteractionEffect {
     GameInteractionEffectQueryResult CanBeApplied() override;
     void _Apply() override;

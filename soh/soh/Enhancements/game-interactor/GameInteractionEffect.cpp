@@ -12,6 +12,7 @@ have functions to both enable and disable said effect.
 #include "GameInteractor.h"
 #include "soh/Enhancements/cosmetics/CosmeticsEditor.h"
 #include "soh/Enhancements/SwitchAge.h"
+#include "soh/Enhancements/Geoguessr/Celebrate.h"
 
 extern "C" {
 #include <z64.h>
@@ -506,6 +507,18 @@ GameInteractionEffectQueryResult SwitchAge::CanBeApplied() {
 }
 void SwitchAge::_Apply() {
     ::SwitchAge();
+}
+
+// MARK: - Celebrate
+GameInteractionEffectQueryResult Celebrate::CanBeApplied() {
+    if (!GameInteractor::IsSaveLoaded(true) || GameInteractor::IsGameplayPaused()) {
+        return GameInteractionEffectQueryResult::TemporarilyNotPossible;
+    } else {
+        return GameInteractionEffectQueryResult::Possible;
+    }
+}
+void Celebrate::_Apply() {
+    Celebrate_Queue();
 }
 
 // MARK: - SetCollisionViewer
