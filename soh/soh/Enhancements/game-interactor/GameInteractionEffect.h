@@ -202,9 +202,11 @@ class SwitchAge : public GameInteractionEffectBase {
     void _Apply() override;
 };
 
-class Celebrate : public GameInteractionEffectBase {
+class Celebrate : public RemovableGameInteractionEffect {
     GameInteractionEffectQueryResult CanBeApplied() override;
+    GameInteractionEffectQueryResult CanBeRemoved() override;
     void _Apply() override;
+    void _Remove() override;
 };
 
 class Warp : public GameInteractionEffectBase, public ParameterizedGameInteractionEffect {

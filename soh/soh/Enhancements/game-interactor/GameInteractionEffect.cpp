@@ -517,8 +517,18 @@ GameInteractionEffectQueryResult Celebrate::CanBeApplied() {
         return GameInteractionEffectQueryResult::Possible;
     }
 }
+GameInteractionEffectQueryResult Celebrate::CanBeRemoved() {
+    if (!GameInteractor::IsSaveLoaded(true)) {
+        return GameInteractionEffectQueryResult::TemporarilyNotPossible;
+    } else {
+        return GameInteractionEffectQueryResult::Possible;
+    }
+}
 void Celebrate::_Apply() {
     Celebrate_Queue();
+}
+void Celebrate::_Remove() {
+    Celebrate_Stop();
 }
 
 // MARK: - Warp
