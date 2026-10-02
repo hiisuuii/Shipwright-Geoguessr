@@ -63,23 +63,27 @@ static void RegisterWorldOverrides() {
             return;
         }
 
-        // The player spawns right after the scene's flags are loaded and before every other actor
-        if (actor->id == ACTOR_PLAYER) {
-            for (s32 flag : entry->switchFlags) {
-                Flags_SetSwitch(gPlayState, flag);
-            }
-            for (s32 room : entry->clearedRooms) {
-                Flags_SetTempClear(gPlayState, room);
-            }
-            return;
-        }
-
         for (s16 id : entry->removedActors) {
             if (actor->id == id) {
                 *result = false;
                 actor->destroy = NULL;
                 return;
             }
+        }
+    });
+
+    // The player spawns before every other actor, and its init restores temporary flags after respawns,
+    // so the overrides go in right after it
+    COND_HOOK(OnActorInit, true, [](void* refActor) {
+        const SceneOverride* entry = FindOverride(gPlayState->sceneNum);
+        if (entry == nullptr || ((Actor*)refActor)->id != ACTOR_PLAYER) {
+            return;
+        }
+        for (s32 flag : entry->switchFlags) {
+            Flags_SetSwitch(gPlayState, flag);
+        }
+        for (s32 room : entry->clearedRooms) {
+            Flags_SetTempClear(gPlayState, room);
         }
     });
 }

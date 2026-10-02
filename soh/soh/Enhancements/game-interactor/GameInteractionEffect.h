@@ -202,6 +202,16 @@ class SwitchAge : public GameInteractionEffectBase {
     void _Apply() override;
 };
 
+// Entrance, room, x, y, z, yaw
+class WarpToPosition : public GameInteractionEffectBase {
+  public:
+    int32_t parameters[6];
+
+  private:
+    GameInteractionEffectQueryResult CanBeApplied() override;
+    void _Apply() override;
+};
+
 class Celebrate : public RemovableGameInteractionEffect {
     GameInteractionEffectQueryResult CanBeApplied() override;
     GameInteractionEffectQueryResult CanBeRemoved() override;

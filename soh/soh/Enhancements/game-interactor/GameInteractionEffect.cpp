@@ -13,6 +13,7 @@ have functions to both enable and disable said effect.
 #include "soh/Enhancements/cosmetics/CosmeticsEditor.h"
 #include "soh/Enhancements/SwitchAge.h"
 #include "soh/Enhancements/Geoguessr/Celebrate.h"
+#include "soh/Enhancements/Geoguessr/PositionWarp.h"
 
 extern "C" {
 #include <z64.h>
@@ -507,6 +508,20 @@ GameInteractionEffectQueryResult SwitchAge::CanBeApplied() {
 }
 void SwitchAge::_Apply() {
     ::SwitchAge();
+}
+
+// MARK: - WarpToPosition
+GameInteractionEffectQueryResult WarpToPosition::CanBeApplied() {
+    if (!GameInteractor::IsSaveLoaded(true) || GameInteractor::IsGameplayPaused() ||
+        gPlayState->transitionTrigger != TRANS_TRIGGER_OFF) {
+        return GameInteractionEffectQueryResult::TemporarilyNotPossible;
+    } else {
+        return GameInteractionEffectQueryResult::Possible;
+    }
+}
+void WarpToPosition::_Apply() {
+    PositionWarp_Start(parameters[0], parameters[1], (float)parameters[2], (float)parameters[3], (float)parameters[4],
+                       (int16_t)parameters[5]);
 }
 
 // MARK: - Celebrate
