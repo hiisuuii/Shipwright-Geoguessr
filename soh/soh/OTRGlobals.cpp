@@ -31,6 +31,7 @@
 #include <ship/utils/binarytools/MemoryStream.h>
 #include "Enhancements/speechsynthesizer/SpeechSynthesizer.h"
 #include "Enhancements/controls/SohInputEditorWindow.h"
+#include "Enhancements/Geoguessr/Capture.h"
 #include "Enhancements/audio/AudioCollection.h"
 #include "Enhancements/debugconsole.h"
 #include "Enhancements/randomizer/randomizer.h"
@@ -1753,6 +1754,14 @@ extern "C" void Graph_StartFrame() {
             break;
         }
 #endif
+        case KbScancode::LUS_KB_F2: {
+            Capture_MarkTarget();
+            break;
+        }
+        case KbScancode::LUS_KB_F3: {
+            Capture_TakeClues();
+            break;
+        }
         case KbScancode::LUS_KB_TAB: {
             if (CVarGetInteger(CVAR_SETTING("Mods.AlternateAssetsHotkey"), 1)) {
                 CVarSetInteger(CVAR_SETTING("AltAssets"), !CVarGetInteger(CVAR_SETTING("AltAssets"), 1));
