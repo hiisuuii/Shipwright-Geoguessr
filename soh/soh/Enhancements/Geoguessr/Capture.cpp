@@ -5,12 +5,14 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cmath>
 #include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <vector>
 
 #include <fast/Fast3dWindow.h>
+#include <libultraship/bridge/consolevariablebridge.h>
 #include <nlohmann/json.hpp>
 #include <png.h>
 #include <ship/Context.h>
@@ -32,6 +34,9 @@ extern SaveContext gSaveContext;
 static const float sClueFovs[] = { 6.0f, 12.0f, 25.0f, 0.0f };
 // Game updates to wait after changing the view before reading the frame, so it has been drawn
 #define SETTLE_UPDATES 3
+// Rendering at a size other than the window's makes the game draw into its own texture, which can be read
+// without the menus on top; at the window's size it draws straight to the screen
+#define CAPTURE_HEIGHT 1440.0f
 
 static std::filesystem::path sCaptureDir;
 static bool sCapturing = false;
@@ -66,14 +71,27 @@ static std::filesystem::path NewCaptureDir() {
     return dir;
 }
 
+static bool IsDirectX11() {
+    return Ship::Context::GetRawInstance()->GetWindow()->GetWindowBackend() == Fast::FAST3D_DXGI_DX11;
+}
+
+static void SetCaptureResolution(bool capturing) {
+    auto window = Ship::Context::GetRawInstance()->GetWindow();
+    float multiplier = CVarGetFloat(CVAR_INTERNAL_RESOLUTION, 1.0f);
+    if (capturing) {
+        multiplier = CAPTURE_HEIGHT / window->GetHeight();
+        if (std::fabs(multiplier - 1.0f) < 0.01f) {
+            multiplier = 1.25f;
+        }
+    }
+    window->SetResolutionMultiplier(multiplier);
+}
+
 static bool ReadGameFrame(uint32_t& width, uint32_t& height, std::vector<uint8_t>& rgb) {
 #ifdef _WIN32
-    auto window = Ship::Context::GetRawInstance()->GetWindow();
-    if (window->GetWindowBackend() != Fast::FAST3D_DXGI_DX11) {
-        return false;
-    }
     // With DirectX 11 this is the shader resource view of the game's own framebuffer, drawn before any menus
-    auto view = reinterpret_cast<ID3D11ShaderResourceView*>(window->GetGfxFrameBuffer());
+    auto view =
+        reinterpret_cast<ID3D11ShaderResourceView*>(Ship::Context::GetRawInstance()->GetWindow()->GetGfxFrameBuffer());
     if (view == nullptr) {
         return false;
     }
@@ -197,6 +215,7 @@ static void SetHidden(bool hidden) {
 
 static void FinishCapture(const std::string& message) {
     sCapturing = false;
+    SetCaptureResolution(false);
     if (gPlayState != NULL) {
         SetHidden(false);
     }
@@ -207,6 +226,10 @@ void Capture_TakeClues() {
     if (sCapturing || !InGameplay()) {
         return;
     }
+    if (!IsDirectX11()) {
+        Notify("Clue capture needs the DirectX 11 renderer");
+        return;
+    }
     if (sCaptureDir.empty()) {
         sCaptureDir = NewCaptureDir();
     }
@@ -215,6 +238,7 @@ void Capture_TakeClues() {
     sSettleUpdates = SETTLE_UPDATES;
     sCameraFov = gPlayState->view.fovy;
     SetHidden(true);
+    SetCaptureResolution(true);
 }
 
 static void OnPlayDrawBegin() {
@@ -231,7 +255,7 @@ static void OnPlayDrawBegin() {
         uint32_t width, height;
         std::vector<uint8_t> rgb;
         if (!ReadGameFrame(width, height, rgb)) {
-            FinishCapture("Clue capture needs the DirectX 11 renderer");
+            FinishCapture("Couldn't read the game image");
             return;
         }
         std::filesystem::path path = sCaptureDir / ("clue" + std::to_string(sClueIndex + 1) + ".png");
