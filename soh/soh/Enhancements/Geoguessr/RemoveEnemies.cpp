@@ -26,6 +26,9 @@ static bool ShouldRemove(Actor* actor) {
         case ACTOR_BOSS_TW:
         case ACTOR_BOSS_SST:
             return false;
+        // Flying pots and Leevers start out as props and only become enemies once they attack
+        case ACTOR_EN_TUBO_TRAP:
+        case ACTOR_EN_REEBA:
         // Guards that catch Link and throw him out
         case ACTOR_EN_GE2:
         case ACTOR_EN_HEISHI1:
