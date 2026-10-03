@@ -36,8 +36,7 @@ void Celebrate_Stop() {
 }
 
 static void KillGlow() {
-    for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_ITEMACTION].head; actor != NULL;
-         actor = actor->next) {
+    for (Actor* actor = gPlayState->actorCtx.actorLists[ACTORCAT_ITEMACTION].head; actor != NULL; actor = actor->next) {
         if (actor->id == ACTOR_DOOR_WARP1 && actor->world.rot.z == GLOW_MARKER) {
             Actor_Kill(actor);
         }

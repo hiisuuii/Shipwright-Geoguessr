@@ -178,12 +178,9 @@ void Capture_MarkTarget() {
     }
     Player* player = GET_PLAYER(gPlayState);
     nlohmann::json target = {
-        { "sceneNum", gPlayState->sceneNum },
-        { "roomNum", gPlayState->roomCtx.curRoom.num },
-        { "x", player->actor.world.pos.x },
-        { "y", player->actor.world.pos.y },
-        { "z", player->actor.world.pos.z },
-        { "linkAge", gSaveContext.linkAge },
+        { "sceneNum", gPlayState->sceneNum }, { "roomNum", gPlayState->roomCtx.curRoom.num },
+        { "x", player->actor.world.pos.x },   { "y", player->actor.world.pos.y },
+        { "z", player->actor.world.pos.z },   { "linkAge", gSaveContext.linkAge },
         { "dayTime", gSaveContext.dayTime },
     };
 

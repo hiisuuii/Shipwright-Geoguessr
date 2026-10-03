@@ -40,8 +40,7 @@ static std::vector<std::pair<std::string, std::shared_ptr<Ship::GuiTexture>>> sP
 static std::set<std::string> sLoadedImages;
 
 static int64_t NowMs() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::steady_clock::now().time_since_epoch())
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
         .count();
 }
 
@@ -173,8 +172,8 @@ void OverlayWindow::Draw() {
     if (mode == OVERLAY_LARGE) {
         ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     } else {
-        ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x + viewport->Size.x - 20, viewport->Pos.y + 20),
-                                ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+        ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x + viewport->Size.x - 20, viewport->Pos.y + 20), ImGuiCond_Always,
+                                ImVec2(1.0f, 0.0f));
     }
     ImGui::SetNextWindowViewport(viewport->ID);
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.6f));

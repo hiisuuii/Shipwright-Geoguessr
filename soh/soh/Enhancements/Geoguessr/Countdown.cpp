@@ -30,8 +30,7 @@ static int64_t sShownStartMs = 0;
 static int32_t sShownNumber = 0;
 
 static int64_t NowMs() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::steady_clock::now().time_since_epoch())
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
         .count();
 }
 
