@@ -141,9 +141,24 @@ void OverlayWindow::Draw() {
         state = sState;
         pending.swap(sPendingImages);
     }
-    for (auto& [key, texture] : pending) {
-        if (sLoadedImages.insert(key).second) {
-            gui->LoadTextureFromResource(TextureName(key), texture);
+    if (!pending.empty()) {
+        // A 1440p clue takes about 14 MB of GPU memory, so only the one on screen and the new ones are kept
+        std::set<std::string> keep = { state.clue };
+        for (auto& [key, texture] : pending) {
+            keep.insert(key);
+        }
+        for (auto it = sLoadedImages.begin(); it != sLoadedImages.end();) {
+            if (keep.count(*it) == 0) {
+                gui->UnloadTexture(TextureName(*it));
+                it = sLoadedImages.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        for (auto& [key, texture] : pending) {
+            if (sLoadedImages.insert(key).second) {
+                gui->LoadTextureFromResource(TextureName(key), texture);
+            }
         }
     }
 

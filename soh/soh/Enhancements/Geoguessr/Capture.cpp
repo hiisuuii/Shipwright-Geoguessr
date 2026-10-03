@@ -197,6 +197,10 @@ void Capture_MarkTarget() {
 
 static void SetHidden(bool hidden) {
     GameInteractor::State::NoUIActive = hidden;
+    if (gPlayState == NULL) {
+        sNaviDraw = NULL;
+        return;
+    }
     Actor* navi = GET_PLAYER(gPlayState)->naviActor;
     if (navi == NULL) {
         return;
@@ -213,9 +217,7 @@ static void SetHidden(bool hidden) {
 static void FinishCapture(const std::string& message) {
     sCapturing = false;
     SetCaptureResolution(false);
-    if (gPlayState != NULL) {
-        SetHidden(false);
-    }
+    SetHidden(false);
     Notify(message);
 }
 
