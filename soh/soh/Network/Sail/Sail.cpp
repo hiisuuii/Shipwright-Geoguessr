@@ -325,6 +325,14 @@ std::unique_ptr<GameInteractionEffectBase> Sail::EffectFromJson(nlohmann::json p
             effect->parameters[0] = payload["parameters"][0].get<int32_t>();
         }
         return effect;
+    } else if (name == "HoldPlayer") {
+        return std::make_unique<GameInteractionEffect::HoldPlayer>();
+    } else if (name == "Countdown") {
+        auto effect = std::make_unique<GameInteractionEffect::Countdown>();
+        if (payload.contains("parameters")) {
+            effect->parameters[0] = payload["parameters"][0].get<int32_t>();
+        }
+        return effect;
     } else if (name == "WarpToPosition") {
         if (!payload.contains("parameters") || payload["parameters"].size() != 6) {
             return nullptr;

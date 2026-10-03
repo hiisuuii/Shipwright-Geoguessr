@@ -14,6 +14,7 @@ have functions to both enable and disable said effect.
 #include "soh/Enhancements/SwitchAge.h"
 #include "soh/Enhancements/Geoguessr/Celebrate.h"
 #include "soh/Enhancements/Geoguessr/PositionWarp.h"
+#include "soh/Enhancements/Geoguessr/Countdown.h"
 
 extern "C" {
 #include <z64.h>
@@ -508,6 +509,33 @@ GameInteractionEffectQueryResult SwitchAge::CanBeApplied() {
 }
 void SwitchAge::_Apply() {
     ::SwitchAge();
+}
+
+// MARK: - HoldPlayer
+GameInteractionEffectQueryResult HoldPlayer::CanBeApplied() {
+    if (!GameInteractor::IsSaveLoaded(true)) {
+        return GameInteractionEffectQueryResult::TemporarilyNotPossible;
+    } else {
+        return GameInteractionEffectQueryResult::Possible;
+    }
+}
+void HoldPlayer::_Apply() {
+    Countdown_HoldPlayer(true);
+}
+void HoldPlayer::_Remove() {
+    Countdown_HoldPlayer(false);
+}
+
+// MARK: - Countdown
+GameInteractionEffectQueryResult Countdown::CanBeApplied() {
+    if (!GameInteractor::IsSaveLoaded(true)) {
+        return GameInteractionEffectQueryResult::TemporarilyNotPossible;
+    } else {
+        return GameInteractionEffectQueryResult::Possible;
+    }
+}
+void Countdown::_Apply() {
+    Countdown_Start(parameters[0]);
 }
 
 // MARK: - WarpToPosition

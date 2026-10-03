@@ -61,6 +61,7 @@ uint8_t GameInteractor_OneHitKOActive();
 uint8_t GameInteractor_PacifistModeActive();
 uint8_t GameInteractor_DisableZTargetingActive();
 uint8_t GameInteractor_ReverseControlsActive();
+uint8_t GameInteractor_HoldPlayerActive();
 int32_t GameInteractor_DefenseModifier();
 float GameInteractor_MovementSpeedMultiplier();
 GIGravityLevel GameInteractor_GravityLevel();
@@ -193,6 +194,7 @@ class GameInteractor {
         static bool PacifistModeActive;
         static bool DisableZTargetingActive;
         static bool ReverseControlsActive;
+        static bool HoldPlayerActive;
         static int32_t DefenseModifier;
         static float MovementSpeedMultiplier;
         static GIGravityLevel GravityLevel;

@@ -252,6 +252,12 @@ void PadMgr_ProcessInputs(PadMgr* padMgr) {
                     }
                 }
 
+                if (GameInteractor_HoldPlayerActive()) {
+                    input->cur.button = 0;
+                    input->cur.stick_x = 0;
+                    input->cur.stick_y = 0;
+                }
+
                 if (!padMgr->ctrlrIsConnected[i]) {
                     padMgr->ctrlrIsConnected[i] = true;
                     osSyncPrintf(VT_FGCOL(YELLOW));

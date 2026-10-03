@@ -9,6 +9,7 @@ bool GameInteractor::State::OneHitKOActive = 0;
 bool GameInteractor::State::PacifistModeActive = 0;
 bool GameInteractor::State::DisableZTargetingActive = 0;
 bool GameInteractor::State::ReverseControlsActive = 0;
+bool GameInteractor::State::HoldPlayerActive = 0;
 int32_t GameInteractor::State::DefenseModifier = 0;
 float GameInteractor::State::MovementSpeedMultiplier = 1.0f;
 GIGravityLevel GameInteractor::State::GravityLevel = GI_GRAVITY_LEVEL_NORMAL;
@@ -73,6 +74,10 @@ uint8_t GameInteractor_DisableZTargetingActive() {
 // MARK: - GameInteractor::State::DisableCameraRotationActive
 uint8_t GameInteractor_ReverseControlsActive() {
     return GameInteractor::State::ReverseControlsActive;
+}
+
+uint8_t GameInteractor_HoldPlayerActive() {
+    return GameInteractor::State::HoldPlayerActive;
 }
 
 // MARK: - GameInteractor::State::DisableCameraRotationActive
