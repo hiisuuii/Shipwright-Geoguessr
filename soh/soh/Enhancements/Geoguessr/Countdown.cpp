@@ -1,5 +1,6 @@
 #include "soh/Enhancements/Geoguessr/Countdown.h"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
+#include "soh/ShipInit.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -11,6 +12,7 @@ extern "C" {
 #include <z64.h>
 #include "functions.h"
 #include "variables.h"
+extern PlayState* gPlayState;
 }
 
 // A hold whose release never arrives (lost connection, server crash) must not freeze Link for good
@@ -21,6 +23,8 @@ extern "C" {
 static std::atomic<int64_t> sCountdownStartMs = 0;
 static std::atomic<int32_t> sCountdownSeconds = 0;
 static std::atomic<int64_t> sHoldStartMs = 0;
+// A held player can't press anything, so an open pause menu or text box would trap them and block the warp
+static std::atomic<bool> sCloseMenusPending = false;
 
 static int64_t sShownStartMs = 0;
 static int32_t sShownNumber = 0;
@@ -41,10 +45,39 @@ void Countdown_Start(int32_t seconds) {
     sCountdownStartMs = NowMs();
 }
 
+void Countdown_Stop() {
+    sCountdownSeconds = 0;
+}
+
 void Countdown_HoldPlayer(bool hold) {
     sHoldStartMs = NowMs();
+    sCloseMenusPending = hold;
     GameInteractor::State::HoldPlayerActive = hold;
 }
+
+static void CloseMenus() {
+    if (!sCloseMenusPending || gPlayState == NULL) {
+        return;
+    }
+    if (gPlayState->msgCtx.msgMode != MSGMODE_NONE) {
+        Message_CloseTextbox(gPlayState);
+    }
+    if (gPlayState->pauseCtx.state == 0 && gPlayState->msgCtx.msgMode == MSGMODE_NONE) {
+        sCloseMenusPending = false;
+    }
+}
+
+static void RegisterCountdown() {
+    COND_HOOK(OnGameFrameUpdate, true, CloseMenus);
+    // Closes the pause menu as if Start were pressed, once it has finished opening
+    REGISTER_VB_SHOULD(VB_CLOSE_PAUSE_MENU, {
+        if (sCloseMenusPending) {
+            *should = true;
+        }
+    });
+}
+
+static RegisterShipInitFunc initFunc(RegisterCountdown);
 
 void CountdownWindow::Draw() {
     int64_t now = NowMs();

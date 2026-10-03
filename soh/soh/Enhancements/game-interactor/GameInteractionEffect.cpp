@@ -537,6 +537,9 @@ GameInteractionEffectQueryResult Countdown::CanBeApplied() {
 void Countdown::_Apply() {
     Countdown_Start(parameters[0]);
 }
+void Countdown::_Remove() {
+    Countdown_Stop();
+}
 
 // MARK: - WarpToPosition
 GameInteractionEffectQueryResult WarpToPosition::CanBeApplied() {

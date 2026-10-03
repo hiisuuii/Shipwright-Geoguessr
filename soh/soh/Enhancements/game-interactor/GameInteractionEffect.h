@@ -208,9 +208,10 @@ class HoldPlayer : public RemovableGameInteractionEffect {
     void _Remove() override;
 };
 
-class Countdown : public GameInteractionEffectBase, public ParameterizedGameInteractionEffect {
+class Countdown : public RemovableGameInteractionEffect, public ParameterizedGameInteractionEffect {
     GameInteractionEffectQueryResult CanBeApplied() override;
     void _Apply() override;
+    void _Remove() override;
 };
 
 // Entrance, room, x, y, z, yaw
