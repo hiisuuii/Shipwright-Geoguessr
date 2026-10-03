@@ -20,10 +20,22 @@
 
 enum OverlayMode { OVERLAY_SMALL, OVERLAY_LARGE, OVERLAY_HIDDEN, OVERLAY_MODE_COUNT };
 
+struct OverlayState {
+    bool visible = false;
+    bool running = false;
+    std::string round;
+    double elapsed = 0.0;
+    double timeLimit = 0.0;
+    std::string status;
+    std::vector<std::string> hints;
+    std::string clue;
+    std::string clueInfo;
+    int64_t receivedMs = 0;
+};
+
 // Sail delivers state and images on its network thread; the window reads them on the game thread
 static std::mutex sMutex;
-static nlohmann::json sState;
-static int64_t sStateReceivedMs = 0;
+static OverlayState sState;
 static std::vector<std::pair<std::string, std::shared_ptr<Ship::GuiTexture>>> sPendingImages;
 static std::set<std::string> sLoadedImages;
 
@@ -54,10 +66,42 @@ static std::vector<uint8_t> DecodeBase64(const std::string& input) {
     return output;
 }
 
-void Overlay_SetState(const nlohmann::json& state) {
+static std::string StringField(const nlohmann::json& json, const char* key) {
+    auto it = json.find(key);
+    return it != json.end() && it->is_string() ? it->get<std::string>() : "";
+}
+
+static double NumberField(const nlohmann::json& json, const char* key) {
+    auto it = json.find(key);
+    return it != json.end() && it->is_number() ? it->get<double>() : 0.0;
+}
+
+// Converted here, on the network thread, so the draw code never touches JSON and a bad packet can't crash a frame
+void Overlay_SetState(const nlohmann::json& json) {
+    OverlayState state;
+    if (json.is_object()) {
+        auto visible = json.find("visible");
+        state.visible = visible != json.end() && visible->is_boolean() && visible->get<bool>();
+        state.running = StringField(json, "phase") == "running";
+        state.round = StringField(json, "round");
+        state.elapsed = NumberField(json, "elapsed");
+        state.timeLimit = NumberField(json, "timeLimit");
+        state.status = StringField(json, "status");
+        state.clue = StringField(json, "clue");
+        state.clueInfo = StringField(json, "clueInfo");
+        auto hints = json.find("hints");
+        if (hints != json.end() && hints->is_array()) {
+            for (const auto& hint : *hints) {
+                if (hint.is_string()) {
+                    state.hints.push_back(hint.get<std::string>());
+                }
+            }
+        }
+    }
+    state.receivedMs = NowMs();
+
     std::lock_guard<std::mutex> lock(sMutex);
-    sState = state;
-    sStateReceivedMs = NowMs();
+    sState = std::move(state);
 }
 
 // Decodes on the calling (network) thread; the upload to the GPU waits for the game thread
@@ -98,13 +142,11 @@ static std::string TextureName(const std::string& key) {
 
 void OverlayWindow::Draw() {
     auto gui = std::dynamic_pointer_cast<Fast::Fast3dGui>(Ship::Context::GetRawInstance()->GetWindow()->GetGui());
-    nlohmann::json state;
-    int64_t receivedMs;
+    OverlayState state;
     std::vector<std::pair<std::string, std::shared_ptr<Ship::GuiTexture>>> pending;
     {
         std::lock_guard<std::mutex> lock(sMutex);
         state = sState;
-        receivedMs = sStateReceivedMs;
         pending.swap(sPendingImages);
     }
     // Textures have to be created on the render thread
@@ -115,15 +157,15 @@ void OverlayWindow::Draw() {
     }
 
     int32_t mode = CVarGetInteger(CVAR_OVERLAY_MODE, OVERLAY_SMALL);
-    if (mode == OVERLAY_HIDDEN || !state.value("visible", false)) {
+    if (mode == OVERLAY_HIDDEN || !state.visible) {
         return;
     }
 
-    double elapsed = state.value("elapsed", 0.0);
-    if (state.value("phase", "") == "running") {
-        elapsed += (NowMs() - receivedMs) / 1000.0;
+    double elapsed = state.elapsed;
+    if (state.running) {
+        elapsed += (NowMs() - state.receivedMs) / 1000.0;
     }
-    std::string clue = state.value("clue", "");
+    const std::string& clue = state.clue;
     bool hasImage = !clue.empty() && sLoadedImages.count(clue) > 0;
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -143,16 +185,16 @@ void OverlayWindow::Draw() {
                      ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings);
     ImGui::SetWindowFontScale(mode == OVERLAY_LARGE ? 1.6f : 1.2f);
 
-    ImGui::TextColored(ImVec4(0.6f, 0.65f, 0.7f, 1.0f), "%s", state.value("round", "").c_str());
+    ImGui::TextColored(ImVec4(0.6f, 0.65f, 0.7f, 1.0f), "%s", state.round.c_str());
     std::string timer = FormatTime(elapsed);
-    if (!state["timeLimit"].is_null()) {
-        timer += " / " + FormatTime(state["timeLimit"].get<double>());
+    if (state.timeLimit > 0) {
+        timer += " / " + FormatTime(state.timeLimit);
     }
     ImGui::SameLine();
     ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.3f, 1.0f), "%s", timer.c_str());
-    ImGui::TextWrapped("%s", state.value("status", "").c_str());
-    for (const auto& hint : state.value("hints", nlohmann::json::array())) {
-        ImGui::TextColored(ImVec4(0.45f, 0.8f, 0.55f, 1.0f), "%s", hint.get<std::string>().c_str());
+    ImGui::TextWrapped("%s", state.status.c_str());
+    for (const std::string& hint : state.hints) {
+        ImGui::TextColored(ImVec4(0.45f, 0.8f, 0.55f, 1.0f), "%s", hint.c_str());
     }
 
     if (hasImage) {
@@ -164,9 +206,8 @@ void OverlayWindow::Draw() {
         }
         ImGui::Image(gui->GetTextureByName(TextureName(clue)), ImVec2(imageWidth, height));
     }
-    std::string clueInfo = state.value("clueInfo", "");
-    if (!clueInfo.empty()) {
-        ImGui::TextColored(ImVec4(0.6f, 0.65f, 0.7f, 1.0f), "%s", clueInfo.c_str());
+    if (!state.clueInfo.empty()) {
+        ImGui::TextColored(ImVec4(0.6f, 0.65f, 0.7f, 1.0f), "%s", state.clueInfo.c_str());
     }
 
     ImGui::End();
