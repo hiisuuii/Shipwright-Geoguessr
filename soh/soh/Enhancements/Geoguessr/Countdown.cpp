@@ -3,9 +3,9 @@
 #include "soh/ShipInit.hpp"
 
 #include <atomic>
-#include <chrono>
 #include <string>
 
+#include <SDL2/SDL_timer.h>
 #include <imgui.h>
 
 extern "C" {
@@ -29,11 +29,6 @@ static std::atomic<bool> sClosePausePending = false;
 static int64_t sShownStartMs = 0;
 static int32_t sShownNumber = 0;
 
-static int64_t NowMs() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
-        .count();
-}
-
 static void PlaySfx(u16 sfxId) {
     Audio_PlaySfxGeneral(sfxId, &gSfxDefaultPos, 4, &gSfxDefaultFreqAndVolScale, &gSfxDefaultFreqAndVolScale,
                          &gSfxDefaultReverb);
@@ -41,7 +36,7 @@ static void PlaySfx(u16 sfxId) {
 
 void Countdown_Start(int32_t seconds) {
     sCountdownSeconds = seconds;
-    sCountdownStartMs = NowMs();
+    sCountdownStartMs = (int64_t)SDL_GetTicks64();
 }
 
 void Countdown_Stop() {
@@ -49,7 +44,7 @@ void Countdown_Stop() {
 }
 
 void Countdown_HoldPlayer(bool hold) {
-    sHoldStartMs = NowMs();
+    sHoldStartMs = (int64_t)SDL_GetTicks64();
     sClosePausePending = hold;
     GameInteractor::State::HoldPlayerActive = hold;
 }
@@ -73,7 +68,7 @@ static void RegisterCountdown() {
 static RegisterShipInitFunc initFunc(RegisterCountdown);
 
 void CountdownWindow::Draw() {
-    int64_t now = NowMs();
+    int64_t now = (int64_t)SDL_GetTicks64();
     if (GameInteractor::State::HoldPlayerActive && now - sHoldStartMs > MAX_HOLD_MS) {
         GameInteractor::State::HoldPlayerActive = false;
     }

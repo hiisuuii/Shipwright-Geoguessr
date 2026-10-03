@@ -8,6 +8,7 @@
 #include <soh/Network/Sail/Sail.h>
 #include <soh/Network/CrowdControl/CrowdControl.h>
 #include "soh/SohGui/UIWidgets.hpp"
+#include "soh/Enhancements/Geoguessr/Overlay.h"
 
 namespace SohGui {
 
@@ -15,9 +16,9 @@ extern std::shared_ptr<SohMenu> mSohMenu;
 using namespace UIWidgets;
 
 static const std::map<int32_t, const char*> geoguessrOverlayOptions = {
-    { 0, "Small" },
-    { 1, "Large" },
-    { 2, "Hidden" },
+    { OVERLAY_SMALL, "Small" },
+    { OVERLAY_LARGE, "Large" },
+    { OVERLAY_HIDDEN, "Hidden" },
 };
 
 void SohMenu::AddMenuNetwork() {
@@ -104,7 +105,7 @@ void SohMenu::AddMenuNetwork() {
         .CVar(CVAR_REMOTE_SAIL("GeoguessrOverlay"))
         .Options(ComboboxOptions()
                      .ComboMap(geoguessrOverlayOptions)
-                     .DefaultIndex(0)
+                     .DefaultIndex(OVERLAY_SMALL)
                      .Tooltip("Size of the clue and timer panel during GeoGuessr rounds. F4 cycles it in-game."));
     AddWidget(path, "Send Player Position##Sail", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_REMOTE_SAIL("PlayerPosition"))

@@ -1,7 +1,6 @@
 #include "soh/Enhancements/Geoguessr/Overlay.h"
 #include "soh/cvar_prefixes.h"
 
-#include <chrono>
 #include <cstdio>
 #include <memory>
 #include <mutex>
@@ -9,6 +8,7 @@
 #include <vector>
 
 #include <fast/Fast3dGui.h>
+#include <SDL2/SDL_timer.h>
 #include <imgui.h>
 #include <libultraship/bridge/consolevariablebridge.h>
 #include <ship/Context.h>
@@ -17,8 +17,6 @@
 #include <stb_image.h>
 
 #define CVAR_OVERLAY_MODE CVAR_REMOTE_SAIL("GeoguessrOverlay")
-
-enum OverlayMode { OVERLAY_SMALL, OVERLAY_LARGE, OVERLAY_HIDDEN, OVERLAY_MODE_COUNT };
 
 struct OverlayState {
     bool visible = false;
@@ -38,11 +36,6 @@ static std::mutex sMutex;
 static OverlayState sState;
 static std::vector<std::pair<std::string, std::shared_ptr<Ship::GuiTexture>>> sPendingImages;
 static std::set<std::string> sLoadedImages;
-
-static int64_t NowMs() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
-        .count();
-}
 
 static std::vector<uint8_t> DecodeBase64(const std::string& input) {
     static const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -97,7 +90,7 @@ void Overlay_SetState(const nlohmann::json& json) {
             }
         }
     }
-    state.receivedMs = NowMs();
+    state.receivedMs = (int64_t)SDL_GetTicks64();
 
     std::lock_guard<std::mutex> lock(sMutex);
     sState = std::move(state);
@@ -148,7 +141,6 @@ void OverlayWindow::Draw() {
         state = sState;
         pending.swap(sPendingImages);
     }
-    // Textures have to be created on the render thread
     for (auto& [key, texture] : pending) {
         if (sLoadedImages.insert(key).second) {
             gui->LoadTextureFromResource(TextureName(key), texture);
@@ -162,7 +154,7 @@ void OverlayWindow::Draw() {
 
     double elapsed = state.elapsed;
     if (state.running) {
-        elapsed += (NowMs() - state.receivedMs) / 1000.0;
+        elapsed += ((int64_t)SDL_GetTicks64() - state.receivedMs) / 1000.0;
     }
     const std::string& clue = state.clue;
     bool hasImage = !clue.empty() && sLoadedImages.count(clue) > 0;
