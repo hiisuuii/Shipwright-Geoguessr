@@ -23,8 +23,8 @@ extern PlayState* gPlayState;
 static std::atomic<int64_t> sCountdownStartMs = 0;
 static std::atomic<int32_t> sCountdownSeconds = 0;
 static std::atomic<int64_t> sHoldStartMs = 0;
-// A held player can't press anything, so an open pause menu or text box would trap them and block the warp
-static std::atomic<bool> sCloseMenusPending = false;
+// A held player can't press Start, so an open pause menu would trap them and block the warp
+static std::atomic<bool> sClosePausePending = false;
 
 static int64_t sShownStartMs = 0;
 static int32_t sShownNumber = 0;
@@ -51,27 +51,21 @@ void Countdown_Stop() {
 
 void Countdown_HoldPlayer(bool hold) {
     sHoldStartMs = NowMs();
-    sCloseMenusPending = hold;
+    sClosePausePending = hold;
     GameInteractor::State::HoldPlayerActive = hold;
 }
 
-static void CloseMenus() {
-    if (!sCloseMenusPending || gPlayState == NULL) {
-        return;
-    }
-    if (gPlayState->msgCtx.msgMode != MSGMODE_NONE) {
-        Message_CloseTextbox(gPlayState);
-    }
-    if (gPlayState->pauseCtx.state == 0 && gPlayState->msgCtx.msgMode == MSGMODE_NONE) {
-        sCloseMenusPending = false;
+static void FinishClosingPause() {
+    if (sClosePausePending && gPlayState != NULL && gPlayState->pauseCtx.state == 0) {
+        sClosePausePending = false;
     }
 }
 
 static void RegisterCountdown() {
-    COND_HOOK(OnGameFrameUpdate, true, CloseMenus);
+    COND_HOOK(OnGameFrameUpdate, true, FinishClosingPause);
     // Closes the pause menu as if Start were pressed, once it has finished opening
     REGISTER_VB_SHOULD(VB_CLOSE_PAUSE_MENU, {
-        if (sCloseMenusPending) {
+        if (sClosePausePending) {
             *should = true;
         }
     });

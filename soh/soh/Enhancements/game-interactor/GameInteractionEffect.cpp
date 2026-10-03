@@ -542,8 +542,9 @@ void Countdown::_Remove() {
 }
 
 // MARK: - WarpToPosition
+// Talking and other cutscenes don't block it: the scene load ends them
 GameInteractionEffectQueryResult WarpToPosition::CanBeApplied() {
-    if (!GameInteractor::IsSaveLoaded(true) || GameInteractor::IsGameplayPaused() ||
+    if (!GameInteractor::IsSaveLoaded(true) || gPlayState->pauseCtx.state != 0 ||
         gPlayState->transitionTrigger != TRANS_TRIGGER_OFF) {
         return GameInteractionEffectQueryResult::TemporarilyNotPossible;
     } else {
@@ -578,8 +579,9 @@ void Celebrate::_Remove() {
 }
 
 // MARK: - Warp
+// Talking and other cutscenes don't block it: the scene load ends them
 GameInteractionEffectQueryResult Warp::CanBeApplied() {
-    if (!GameInteractor::IsSaveLoaded(true) || GameInteractor::IsGameplayPaused() ||
+    if (!GameInteractor::IsSaveLoaded(true) || gPlayState->pauseCtx.state != 0 ||
         gPlayState->transitionTrigger != TRANS_TRIGGER_OFF) {
         return GameInteractionEffectQueryResult::TemporarilyNotPossible;
     } else {
