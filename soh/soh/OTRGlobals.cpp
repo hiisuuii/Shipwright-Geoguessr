@@ -32,6 +32,7 @@
 #include "Enhancements/speechsynthesizer/SpeechSynthesizer.h"
 #include "Enhancements/controls/SohInputEditorWindow.h"
 #include "Enhancements/Geoguessr/Capture.h"
+#include "Enhancements/Geoguessr/Overlay.h"
 #include "Enhancements/audio/AudioCollection.h"
 #include "Enhancements/debugconsole.h"
 #include "Enhancements/randomizer/randomizer.h"
@@ -1760,6 +1761,10 @@ extern "C" void Graph_StartFrame() {
         }
         case KbScancode::LUS_KB_F3: {
             Capture_TakeClues();
+            break;
+        }
+        case KbScancode::LUS_KB_F4: {
+            Overlay_CycleMode();
             break;
         }
         case KbScancode::LUS_KB_TAB: {

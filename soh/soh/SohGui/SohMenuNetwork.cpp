@@ -14,6 +14,12 @@ namespace SohGui {
 extern std::shared_ptr<SohMenu> mSohMenu;
 using namespace UIWidgets;
 
+static const std::map<int32_t, const char*> geoguessrOverlayOptions = {
+    { 0, "Small" },
+    { 1, "Large" },
+    { 2, "Hidden" },
+};
+
 void SohMenu::AddMenuNetwork() {
     // Add Network Menu
     AddMenuEntry("Network", CVAR_SETTING("Menu.NetworkSidebarSection"));
@@ -94,6 +100,12 @@ void SohMenu::AddMenuNetwork() {
             info.name = "Connecting...##Sail";
         }
     });
+    AddWidget(path, "GeoGuessr Overlay##Sail", WIDGET_CVAR_COMBOBOX)
+        .CVar(CVAR_REMOTE_SAIL("GeoguessrOverlay"))
+        .Options(ComboboxOptions()
+                     .ComboMap(geoguessrOverlayOptions)
+                     .DefaultIndex(0)
+                     .Tooltip("Size of the clue and timer panel during GeoGuessr rounds. F4 cycles it in-game."));
     AddWidget(path, "Send Player Position##Sail", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_REMOTE_SAIL("PlayerPosition"))
         .Options(CheckboxOptions().Tooltip(

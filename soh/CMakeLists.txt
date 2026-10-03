@@ -651,6 +651,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
             "Vorbis::vorbisfile"
             "OpusFile::opusfile"
             "PNG::PNG"
+            "stb"
         )
     elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
         set(ADDITIONAL_LIBRARY_DEPENDENCIES

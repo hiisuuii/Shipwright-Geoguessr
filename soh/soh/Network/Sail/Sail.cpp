@@ -9,6 +9,7 @@
 #include "soh/ShipUtils.h"
 #include "soh/cvar_prefixes.h"
 #include "soh/Notification/Notification.h"
+#include "soh/Enhancements/Geoguessr/Overlay.h"
 
 extern "C" {
 #include <z64.h>
@@ -91,6 +92,16 @@ void Sail::OnIncomingJson(nlohmann::json payload) {
                 .mute = payload.value("mute", false),
             });
             responsePayload["status"] = "success";
+            SendJsonToRemote(responsePayload);
+            return;
+        } else if (payloadType == "overlay") {
+            Overlay_SetState(payload["overlay"]);
+            responsePayload["status"] = "success";
+            SendJsonToRemote(responsePayload);
+            return;
+        } else if (payloadType == "overlayImage") {
+            bool loaded = Overlay_AddImage(payload["key"].get<std::string>(), payload["data"].get<std::string>());
+            responsePayload["status"] = loaded ? "success" : "failure";
             SendJsonToRemote(responsePayload);
             return;
         } else if (payloadType == "effect") {

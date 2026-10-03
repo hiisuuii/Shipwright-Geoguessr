@@ -44,6 +44,7 @@
 #include "soh/Enhancements/randomizer/Plandomizer.h"
 #include "soh/SohGui/SohModals.h"
 #include "soh/Enhancements/Geoguessr/Countdown.h"
+#include "soh/Enhancements/Geoguessr/Overlay.h"
 
 namespace SohGui {
 
@@ -111,6 +112,7 @@ std::shared_ptr<PlandomizerWindow> mPlandomizerWindow;
 std::shared_ptr<SohModalWindow> mModalWindow;
 std::shared_ptr<Notification::Window> mNotificationWindow;
 std::shared_ptr<CountdownWindow> mCountdownWindow;
+std::shared_ptr<OverlayWindow> mOverlayWindow;
 std::shared_ptr<TimeDisplayWindow> mTimeDisplayWindow;
 std::shared_ptr<AnchorRoomWindow> mAnchorRoomWindow;
 
@@ -229,6 +231,9 @@ void SetupGuiElements() {
     mCountdownWindow = std::make_shared<CountdownWindow>(CVAR_WINDOW("GeoguessrCountdown"), "Countdown Window");
     gui->AddGuiWindow(mCountdownWindow);
     mCountdownWindow->Show();
+    mOverlayWindow = std::make_shared<OverlayWindow>(CVAR_WINDOW("GeoguessrOverlay"), "GeoGuessr Overlay");
+    gui->AddGuiWindow(mOverlayWindow);
+    mOverlayWindow->Show();
     mTimeDisplayWindow = std::make_shared<TimeDisplayWindow>(CVAR_WINDOW("TimeDisplayEnabled"), "Additional Timers");
     gui->AddGuiWindow(mTimeDisplayWindow);
     mAnchorRoomWindow = std::make_shared<AnchorRoomWindow>(CVAR_WINDOW("AnchorRoom"), "Anchor Room");
@@ -241,6 +246,7 @@ void Destroy() {
 
     mNotificationWindow = nullptr;
     mCountdownWindow = nullptr;
+    mOverlayWindow = nullptr;
     mModalWindow = nullptr;
     mItemTrackerWindow = nullptr;
     mItemTrackerSettingsWindow = nullptr;

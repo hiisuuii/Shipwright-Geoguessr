@@ -1,0 +1,174 @@
+#include "soh/Enhancements/Geoguessr/Overlay.h"
+#include "soh/cvar_prefixes.h"
+
+#include <chrono>
+#include <cstdio>
+#include <memory>
+#include <mutex>
+#include <set>
+#include <vector>
+
+#include <fast/Fast3dGui.h>
+#include <imgui.h>
+#include <libultraship/bridge/consolevariablebridge.h>
+#include <ship/Context.h>
+#include <ship/window/gui/resource/GuiTexture.h>
+#include <spdlog/spdlog.h>
+#include <stb_image.h>
+
+#define CVAR_OVERLAY_MODE CVAR_REMOTE_SAIL("GeoguessrOverlay")
+
+enum OverlayMode { OVERLAY_SMALL, OVERLAY_LARGE, OVERLAY_HIDDEN, OVERLAY_MODE_COUNT };
+
+// Sail delivers state and images on its network thread; the window reads them on the game thread
+static std::mutex sMutex;
+static nlohmann::json sState;
+static int64_t sStateReceivedMs = 0;
+static std::vector<std::pair<std::string, std::shared_ptr<Ship::GuiTexture>>> sPendingImages;
+static std::set<std::string> sLoadedImages;
+
+static int64_t NowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
+}
+
+static std::vector<uint8_t> DecodeBase64(const std::string& input) {
+    static const std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::vector<uint8_t> output;
+    output.reserve(input.size() * 3 / 4);
+    uint32_t buffer = 0;
+    int32_t bits = 0;
+    for (char c : input) {
+        size_t value = alphabet.find(c);
+        if (value == std::string::npos) {
+            continue;
+        }
+        buffer = (buffer << 6) | (uint32_t)value;
+        bits += 6;
+        if (bits >= 8) {
+            bits -= 8;
+            output.push_back((uint8_t)(buffer >> bits));
+        }
+    }
+    return output;
+}
+
+void Overlay_SetState(const nlohmann::json& state) {
+    std::lock_guard<std::mutex> lock(sMutex);
+    sState = state;
+    sStateReceivedMs = NowMs();
+}
+
+// Decodes on the calling (network) thread; the upload to the GPU waits for the game thread
+bool Overlay_AddImage(const std::string& key, const std::string& base64) {
+    std::vector<uint8_t> data = DecodeBase64(base64);
+    auto texture = std::make_shared<Ship::GuiTexture>();
+    texture->Data = stbi_load_from_memory(data.data(), (int)data.size(), &texture->Metadata.Width,
+                                          &texture->Metadata.Height, nullptr, 4);
+    if (texture->Data == nullptr) {
+        SPDLOG_ERROR("[Geoguessr] Couldn't decode overlay image: {}", stbi_failure_reason());
+        return false;
+    }
+    texture->DataSize = (size_t)texture->Metadata.Width * texture->Metadata.Height * 4;
+
+    std::lock_guard<std::mutex> lock(sMutex);
+    sPendingImages.push_back({ key, texture });
+    return true;
+}
+
+void Overlay_CycleMode() {
+    int32_t mode = (CVarGetInteger(CVAR_OVERLAY_MODE, OVERLAY_SMALL) + 1) % OVERLAY_MODE_COUNT;
+    CVarSetInteger(CVAR_OVERLAY_MODE, mode);
+    Ship::Context::GetRawInstance()->GetWindow()->GetGui()->SaveConsoleVariablesNextFrame();
+}
+
+static std::string FormatTime(double seconds) {
+    if (seconds < 0) {
+        seconds = 0;
+    }
+    char text[32];
+    snprintf(text, sizeof(text), "%d:%04.1f", (int)seconds / 60, seconds - ((int)seconds / 60) * 60);
+    return text;
+}
+
+static std::string TextureName(const std::string& key) {
+    return "GeoguessrClue_" + key;
+}
+
+void OverlayWindow::Draw() {
+    auto gui = std::dynamic_pointer_cast<Fast::Fast3dGui>(Ship::Context::GetRawInstance()->GetWindow()->GetGui());
+    nlohmann::json state;
+    int64_t receivedMs;
+    std::vector<std::pair<std::string, std::shared_ptr<Ship::GuiTexture>>> pending;
+    {
+        std::lock_guard<std::mutex> lock(sMutex);
+        state = sState;
+        receivedMs = sStateReceivedMs;
+        pending.swap(sPendingImages);
+    }
+    // Textures have to be created on the render thread
+    for (auto& [key, texture] : pending) {
+        if (sLoadedImages.insert(key).second) {
+            gui->LoadTextureFromResource(TextureName(key), texture);
+        }
+    }
+
+    int32_t mode = CVarGetInteger(CVAR_OVERLAY_MODE, OVERLAY_SMALL);
+    if (mode == OVERLAY_HIDDEN || !state.value("visible", false)) {
+        return;
+    }
+
+    double elapsed = state.value("elapsed", 0.0);
+    if (state.value("phase", "") == "running") {
+        elapsed += (NowMs() - receivedMs) / 1000.0;
+    }
+    std::string clue = state.value("clue", "");
+    bool hasImage = !clue.empty() && sLoadedImages.count(clue) > 0;
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    float imageWidth = mode == OVERLAY_LARGE ? viewport->Size.x * 0.7f : viewport->Size.x * 0.24f;
+    if (mode == OVERLAY_LARGE) {
+        ImGui::SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    } else {
+        ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x + viewport->Size.x - 20, viewport->Pos.y + 20),
+                                ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+    }
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0.6f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
+    ImGui::Begin("GeoguessrOverlay", nullptr,
+                 ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoFocusOnAppearing |
+                     ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs |
+                     ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings);
+    ImGui::SetWindowFontScale(mode == OVERLAY_LARGE ? 1.6f : 1.2f);
+
+    ImGui::TextColored(ImVec4(0.6f, 0.65f, 0.7f, 1.0f), "%s", state.value("round", "").c_str());
+    std::string timer = FormatTime(elapsed);
+    if (!state["timeLimit"].is_null()) {
+        timer += " / " + FormatTime(state["timeLimit"].get<double>());
+    }
+    ImGui::SameLine();
+    ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.3f, 1.0f), "%s", timer.c_str());
+    ImGui::TextWrapped("%s", state.value("status", "").c_str());
+    for (const auto& hint : state.value("hints", nlohmann::json::array())) {
+        ImGui::TextColored(ImVec4(0.45f, 0.8f, 0.55f, 1.0f), "%s", hint.get<std::string>().c_str());
+    }
+
+    if (hasImage) {
+        ImVec2 size = gui->GetTextureSize(TextureName(clue));
+        float height = size.x > 0 ? imageWidth * size.y / size.x : 0;
+        if (mode == OVERLAY_LARGE && height > viewport->Size.y * 0.75f) {
+            height = viewport->Size.y * 0.75f;
+            imageWidth = height * size.x / size.y;
+        }
+        ImGui::Image(gui->GetTextureByName(TextureName(clue)), ImVec2(imageWidth, height));
+    }
+    std::string clueInfo = state.value("clueInfo", "");
+    if (!clueInfo.empty()) {
+        ImGui::TextColored(ImVec4(0.6f, 0.65f, 0.7f, 1.0f), "%s", clueInfo.c_str());
+    }
+
+    ImGui::End();
+    ImGui::PopStyleColor(2);
+}
